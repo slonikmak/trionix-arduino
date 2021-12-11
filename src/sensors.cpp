@@ -86,6 +86,7 @@ void updateIMU()
 
 void setup()
 {
+    Serial.println("Start");
     Serial.begin(115200);
     Wire.begin();
     delay(2000);
