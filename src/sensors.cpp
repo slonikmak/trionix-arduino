@@ -41,6 +41,7 @@ void setDefaultIMUValues()
 void printServiceMsg(String msg)
 {
     Serial.println("#0 " + msg + ";");
+    Serial.flush();
 }
 
 void stopStreaming()
@@ -72,6 +73,7 @@ void printData()
                     + String(sensor.temperature()) + ";";
 
     Serial.println(answer);
+    Serial.flush();
 }
 
 void updateDepth()
@@ -86,11 +88,12 @@ void updateIMU()
 
 void setup()
 {
-    delay(2000);
-    Serial.begin(115200);
-    Serial.println("Start");
     Wire.begin();
-    
+    Serial.begin(115200);
+    Serial.flush();
+
+    delay(2000);
+
 
     if (!mpu.setup(0x68))
     { // change to your own address
