@@ -90,7 +90,10 @@ void setup()
 {
     Wire.begin();
     Serial.begin(115200);
-    Serial.flush();
+    
+    while(Serial.available() > 0) {
+    char t = Serial.read();
+  }
 
     delay(2000);
 
