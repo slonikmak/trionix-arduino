@@ -86,10 +86,11 @@ void updateIMU()
 
 void setup()
 {
+    delay(2000);
     Serial.begin(115200);
     Serial.println("Start");
     Wire.begin();
-    delay(2000);
+    
 
     if (!mpu.setup(0x68))
     { // change to your own address
