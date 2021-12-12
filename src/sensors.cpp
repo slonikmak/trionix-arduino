@@ -40,8 +40,7 @@ void setDefaultIMUValues()
 
 void printServiceMsg(String msg)
 {
-    Serial.println("#0 " + msg + ";");
-    Serial.flush();
+    Serial.print("#0 " + msg + ";");
 }
 
 void stopStreaming()
@@ -72,8 +71,7 @@ void printData()
                     // temp
                     + String(sensor.temperature()) + ";";
 
-    Serial.println(answer);
-    Serial.flush();
+    Serial.print(answer);
 }
 
 void updateDepth()
