@@ -90,8 +90,6 @@ void setup()
     Serial.begin(115200);
     
     delay(2000);
-
-
     if (!mpu.setup(0x68))
     { // change to your own address
         while (1)
