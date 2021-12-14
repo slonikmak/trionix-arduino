@@ -181,9 +181,6 @@ void loop()
             straeming();
         }
 
-        else if (comand == 3) {
-            ready = true;
-        }
     }
     updateIMU();
 
