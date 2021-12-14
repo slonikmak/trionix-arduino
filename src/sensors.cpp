@@ -6,7 +6,7 @@
 Протокол в Arduino (режимы работы)
 $1 - отправка данных датчиков
 $2 - калибровка
-$3 - сбросить калибровку
+$3 - к приёму готов
 
 Калибровка https://github.com/hideakitai/MPU9250/blob/master/examples/calibration_eeprom/calibration_eeprom.ino
 */
@@ -41,6 +41,7 @@ void setDefaultIMUValues()
 void printServiceMsg(String msg)
 {
     Serial.print("#0 " + msg + ";");
+    
 }
 
 void stopStreaming()
@@ -58,8 +59,7 @@ void straeming()
 
 void printData()
 {
-
-    String answer = "#1 "
+        String answer = "#1 "
                     // heading
                     + String(mpu.getYaw()) + " "
                     // pitch
@@ -71,7 +71,8 @@ void printData()
                     // temp
                     + String(sensor.temperature()) + ";";
 
-    Serial.print(answer);
+        Serial.print(answer);
+    
 }
 
 void updateDepth()
@@ -116,6 +117,8 @@ void setup()
 
     sensor.read();
     depth_cal = sensor.depth(); //калибровка глубины в самом начале работы
+
+    printServiceMsg("Started");
 
     if (isCalibrated())
     {
@@ -162,11 +165,6 @@ void calibrateIMU()
 
 void loop()
 {
-
-    updateIMU();
-
-    OS.tick();
-
     parser.update();
 
     if (parser.received())
@@ -182,5 +180,14 @@ void loop()
         {
             straeming();
         }
+
+        else if (comand == 3) {
+            ready = true;
+        }
     }
+    updateIMU();
+
+    OS.tick();
+
+    
 }
