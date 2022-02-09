@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "..\\test"
+		},
+		{
+			"name": "Trionix",
+			"path": "."
+		},
+		{
+			"name": "Sparkfun_Test",
+			"path": "..\\Sparkfun_Test"
+		},
+		{
+			"name": "i2cdev_test1",
+			"path": "..\\i2cdev_test1"
+		},
+		{
+			"name": "depth_test",
+			"path": "..\\depth_test"
+		},
+		{
+			"name": "sensors_test",
+			"path": "..\\sensors_test"
+		}
+	],
+	"settings": {}
+}
