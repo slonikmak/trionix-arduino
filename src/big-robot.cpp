@@ -2,7 +2,6 @@
 Протокол из Arduino:
 #0 [msg]- сервисное сообщение
 #1 [1 23 44 55] - значение датчиков
-#2 [msg_with_underscore] - debug сообщение
 
 Протокол в Arduino (режимы работы)
 $1 - старт стриминга данных датчиков
@@ -13,14 +12,20 @@ $3 - установка моторов
 */
 
 #include <Arduino.h>
-#include <SerialParser.h>
+//#include <Parser.h>
 #include "MPU9250.h"
-#include <GyverOS.h>
 #include "eeprom_utils.h"
 #include "MS5837.h"
-#include <Servo_Hardware_PWM.h>
+#include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
 
-#define PARSE_AMOUNT 6
+#define PARSE_AMOUNT 6        // число значений в массиве, который хотим получить
+#define INPUT_AMOUNT 100      // максимальное количество символов в пакете, который идёт в сериал
+char inputData[INPUT_AMOUNT]; // массив входных значений (СИМВОЛЫ)
+int intData[PARSE_AMOUNT];    // массив численных значений после парсинга
+boolean recievedFlag;
+boolean getStarted;
+byte index;
+String string_convert;
 
 //front
 #define pin1 6
@@ -48,9 +53,10 @@ int m1_val, m2_val, m3_val, m4_val;
 
 int ledValue = 0;
 
-GyverOS<3> OS; // указать макс. количество задач
+const int BUFFER_SIZE = 100;
+char buf[BUFFER_SIZE];
+
 MPU9250 mpu;
-SerialParser parser(PARSE_AMOUNT);
 
 //БЛОК параметров датчика давления
 MS5837 sensor;
@@ -60,21 +66,21 @@ int mode = 1; // 1 - streaming,  2 - calibration
 
 void attach_pins()
 {
-  m1.attach(pin2);
-  m1.writeMicroseconds(1500); // send "stop" signal to ESC.
-  m2.attach(pin3);
-  m2.writeMicroseconds(1500);
-  m3.attach(pin1);
-  m3.writeMicroseconds(1500);
-  m4.attach(pin4);
-  m4.writeMicroseconds(1500);
+    m1.attach(pin1);
+    m1.writeMicroseconds(1500); // send "stop" signal to ESC.
+    m2.attach(pin2);
+    m2.writeMicroseconds(1500);
+    m3.attach(pin3);
+    m3.writeMicroseconds(1500);
+    m4.attach(pin4);
+    m4.writeMicroseconds(1500);
 
-  //    s1.attach(s_pin1);
-  //    s2.attach(s_pin2);
-  //    s3.attach(s_pin3);
-  //    s4.attach(s_pin4);
+    //    s1.attach(s_pin1);
+    //    s2.attach(s_pin2);
+    //    s3.attach(s_pin3);
+    //    s4.attach(s_pin4);
 
-  pinMode(ledPin, OUTPUT);
+     pinMode(ledPin, OUTPUT);
 }
 
 void setDefaultIMUValues()
@@ -88,29 +94,16 @@ void setDefaultIMUValues()
 void printServiceMsg(String msg)
 {
     Serial.print("#0 " + msg + ";");
-    
 }
 
-void printDebugMsg(String msg) {
-     Serial.print("#2 " + msg + ";");
-}
-
-void stopStreaming()
+void printDebugMsg(String msg)
 {
-    OS.stop(0);
-    OS.stop(1);
-}
-
-void straeming()
-{
-    mode = 1;
-    OS.start(0);
-    OS.start(1);
+    Serial.print("#2 " + msg + ";");
 }
 
 void printData()
 {
-        String answer = "#1 "
+    String answer = "#1 "
                     // heading
                     + String(mpu.getYaw()) + " "
                     // pitch
@@ -122,8 +115,7 @@ void printData()
                     // temp
                     + String(sensor.temperature()) + ";";
 
-        Serial.print(answer);
-    
+     Serial.print(answer);
 }
 
 void updateDepth()
@@ -144,7 +136,7 @@ void setup()
     attach_pins();
 
     analogWrite(ledPin, 120);
-    
+
     delay(2000);
     if (!mpu.setup(0x68))
     { // change to your own address
@@ -188,9 +180,6 @@ void setup()
 
     analogWrite(ledPin, 0);
 
-    OS.attach(0, updateDepth, 20);
-    OS.attach(1, printData, 50);
-
     // straeming();
 }
 
@@ -222,60 +211,159 @@ void calibrateIMU()
 
 void setMotors()
 {
-    int *intData = parser.getData();
+
     int m1_val_new = map(intData[1], -100, 100, 1100, 1900);
     int m2_val_new = map(intData[2], -100, 100, 1100, 1900);
     int m3_val_new = map(intData[3], -100, 100, 1100, 1900);
     int m4_val_new = map(intData[4], -100, 100, 1100, 1900);
 
-    if (intData[5] != ledValue) {
+    if (intData[5] != ledValue)
+    {
         ledValue = intData[5];
         analogWrite(ledPin, ledValue);
     }
 
+    //        int s1_val = dataArray[4];
+    //        int s2_val = dataArray[5];
+    //        int s3_val = dataArray[6];
+    //        int s4_val = dataArray[7];
+    //
+    //        int l1_val = dataArray[8];
 
-//        int s1_val = dataArray[4];
-//        int s2_val = dataArray[5];
-//        int s3_val = dataArray[6];
-//        int s4_val = dataArray[7];
-//
-//        int l1_val = dataArray[8];
+    m1.writeMicroseconds(m1_val_new);
 
-        m1.writeMicroseconds(m1_val_new);
+    m2.writeMicroseconds(m2_val_new);
 
-        m2.writeMicroseconds(m2_val_new);
+    m3.writeMicroseconds(m3_val_new);
 
-        m3.writeMicroseconds(m3_val_new);
+    m4.writeMicroseconds(m4_val_new);
+}
 
-        m4.writeMicroseconds(m4_val_new);
+void parsing()
+{
+    while (Serial.available() > 0)
+    {
+        char incomingByte = Serial.read(); // обязательно ЧИТАЕМ входящий символ
+        if (incomingByte == '$')
+        {                      // если это $
+            getStarted = true; // поднимаем флаг, что можно парсить
+        }
+        else if (incomingByte != ';' && getStarted)
+        { // пока это не ;
+            // в общем происходит всякая магия, парсинг осуществляется функцией strtok_r
+            inputData[index] = incomingByte;
+            index++;
+            inputData[index] = NULL;
+        }
+        else
+        {
+            if (getStarted)
+            {
+                char *p = inputData;
+                char *str;
+                index = 0;
+                String value = "";
+                while ((str = strtok_r(p, " ", &p)) != NULL)
+                {
+                    string_convert = str;
+                    intData[index] = string_convert.toInt();
+                    index++;
+                }
+                index = 0;
+            }
+        }
+        if (incomingByte == ';')
+        { // если таки приняли ; - конец парсинга
+            getStarted = false;
+            recievedFlag = true;
+        }
+    }
 }
 
 void loop()
 {
-    parser.update();
 
-    if (parser.received())
+    //parser.update();
+
+    // int intData[] = {0, 0, 0, 0, 0};
+
+    if (mpu.update())
     {
-        int comand = parser.getData()[0];
-
-        if (comand == 2 && mode == 1)
+        static uint32_t prev_ms = millis();
+        if (millis() > prev_ms + 30)
         {
-            stopStreaming();
-            calibrateIMU();
+             printData();
+            prev_ms = millis();
         }
-        else if (comand == 1 && mode == 2)
-        {
-            straeming();
-        }
-
-        else if (comand == 3) {
-            setMotors();
-        }
-
     }
-    updateIMU();
 
-    OS.tick();
+    parsing(); // функция парсинга
+    if (recievedFlag)
+    { // если получены данные
+ 
 
+if (recievedFlag){
     
+        int com_type = intData[0];
+
+        
+        if (com_type == 2 && mode == 1)
+         {
+             calibrateIMU();
+             printServiceMsg("calibrate imu");
+
+         }
+
+         else if (com_type == 3) {
+
+        //      printServiceMsg("motors set");
+        //              for (byte i = 0; i < PARSE_AMOUNT; i++)
+        // { // выводим элементы массива
+        //     Serial.print(intData[i]);
+        //     Serial.print(" ");
+        // }
+
+             setMotors();
+        
+             //printData();
+         }
+
 }
+
+       recievedFlag = false;
+
+
+        // for (byte i = 0; i < PARSE_AMOUNT; i++)
+        // { // выводим элементы массива
+        //     Serial.print(intData[i]);
+        //     Serial.print(" ");
+        // }
+        // Serial.println();
+        // printServiceMsg("print");
+    }
+    sensor.read();
+    // if (recievedFlag)
+    // {
+    //     recievedFlag = false;
+    //
+
+    //     if (comand == 2 && mode == 1)
+    //     {
+    //         calibrateIMU();
+    //         printServiceMsg("calibrate imu");
+
+    //     }
+
+    //     else if (comand == 3) {
+
+    //         setMotors();
+    //    
+    //         printData();
+    //     }
+
+    // }
+
+    // check if data is available
+    // check if data is available
+}
+
