@@ -119,7 +119,7 @@ void printData()
                     // depth
                     + String(sensor.depth() - depth_cal) + " "
                     // temp
-                    + String(sensor.temperature()) + ""
+                    + String(sensor.temperature()) + " "
                     // Battery Voltage
                     + String(BatMeasVal) + ";";
 
