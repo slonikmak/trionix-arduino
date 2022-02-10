@@ -53,6 +53,12 @@ int m1_val, m2_val, m3_val, m4_val;
 
 int ledValue = 0;
 
+int BatMeasPin = A0;
+float BatMeasVal = 0;
+#define VREF 5.1
+#define DIV_R3 10200
+#define DIV_R4 2550
+
 const int BUFFER_SIZE = 100;
 char buf[BUFFER_SIZE];
 
@@ -80,7 +86,7 @@ void attach_pins()
     //    s3.attach(s_pin3);
     //    s4.attach(s_pin4);
 
-     pinMode(ledPin, OUTPUT);
+    pinMode(ledPin, OUTPUT);
 }
 
 void setDefaultIMUValues()
@@ -113,9 +119,11 @@ void printData()
                     // depth
                     + String(sensor.depth() - depth_cal) + " "
                     // temp
-                    + String(sensor.temperature()) + ";";
+                    + String(sensor.temperature()) + ""
+                    // Battery Voltage
+                    + String(BatMeasVal) + ";";
 
-     Serial.print(answer);
+    Serial.print(answer);
 }
 
 void updateDepth()
@@ -283,16 +291,13 @@ void parsing()
 void loop()
 {
 
-    //parser.update();
-
-    // int intData[] = {0, 0, 0, 0, 0};
 
     if (mpu.update())
     {
         static uint32_t prev_ms = millis();
         if (millis() > prev_ms + 30)
         {
-             printData();
+            printData();
             prev_ms = millis();
         }
     }
@@ -300,70 +305,23 @@ void loop()
     parsing(); // функция парсинга
     if (recievedFlag)
     { // если получены данные
- 
+        if (recievedFlag)
+        {
+            int com_type = intData[0];
 
-if (recievedFlag){
-    
-        int com_type = intData[0];
+            if (com_type == 2 && mode == 1)
+            {
+                calibrateIMU();
+                printServiceMsg("calibrate imu");
+            }
 
-        
-        if (com_type == 2 && mode == 1)
-         {
-             calibrateIMU();
-             printServiceMsg("calibrate imu");
-
-         }
-
-         else if (com_type == 3) {
-
-        //      printServiceMsg("motors set");
-        //              for (byte i = 0; i < PARSE_AMOUNT; i++)
-        // { // выводим элементы массива
-        //     Serial.print(intData[i]);
-        //     Serial.print(" ");
-        // }
-
-             setMotors();
-        
-             //printData();
-         }
-
-}
-
-       recievedFlag = false;
-
-
-        // for (byte i = 0; i < PARSE_AMOUNT; i++)
-        // { // выводим элементы массива
-        //     Serial.print(intData[i]);
-        //     Serial.print(" ");
-        // }
-        // Serial.println();
-        // printServiceMsg("print");
+            else if (com_type == 3)
+            {
+                setMotors();
+            }
+        }
+        recievedFlag = false;
     }
-    sensor.read();
-    // if (recievedFlag)
-    // {
-    //     recievedFlag = false;
-    //
-
-    //     if (comand == 2 && mode == 1)
-    //     {
-    //         calibrateIMU();
-    //         printServiceMsg("calibrate imu");
-
-    //     }
-
-    //     else if (comand == 3) {
-
-    //         setMotors();
-    //    
-    //         printData();
-    //     }
-
-    // }
-
-    // check if data is available
-    // check if data is available
+    sensor.read(); //чтение глубины
+    BatMeasVal = (float)analogRead(0) * VREF * ((DIV_R3 + DIV_R4) / DIV_R4) / 1024;
 }
-
