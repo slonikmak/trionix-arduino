@@ -18,6 +18,7 @@ $3 - установка моторов
 #include "MS5837.h"
 #include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
 
+
 #define PARSE_AMOUNT 6        // число значений в массиве, который хотим получить
 #define INPUT_AMOUNT 100      // максимальное количество символов в пакете, который идёт в сериал
 char inputData[INPUT_AMOUNT]; // массив входных значений (СИМВОЛЫ)
@@ -55,9 +56,9 @@ int ledValue = 0;
 
 int BatMeasPin = A0;
 float BatMeasVal = 0;
-#define VREF 5.1
-#define DIV_R3 10200
-#define DIV_R4 2550
+#define VREF 2.5
+#define DIV_R3 13000
+#define DIV_R4 2000
 
 const int BUFFER_SIZE = 100;
 char buf[BUFFER_SIZE];
@@ -140,6 +141,7 @@ void setup()
 {
     Wire.begin();
     Serial.begin(115200);
+    analogReference(EXTERNAL);
 
     attach_pins();
 
