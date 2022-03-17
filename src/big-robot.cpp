@@ -19,7 +19,7 @@ $3 - установка моторов
 #include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
 
 
-#define PARSE_AMOUNT 6        // число значений в массиве, который хотим получить
+#define PARSE_AMOUNT 9        // число значений в массиве, который хотим получить
 #define INPUT_AMOUNT 100      // максимальное количество символов в пакете, который идёт в сериал
 char inputData[INPUT_AMOUNT]; // массив входных значений (СИМВОЛЫ)
 int intData[PARSE_AMOUNT];    // массив численных значений после парсинга
@@ -28,29 +28,32 @@ boolean getStarted;
 byte index;
 String string_convert;
 
-//front
-#define pin1 6
-//right
-#define pin2 7
-//back
-#define pin3 8
-//left
-#define pin4 5
-//servo front
-#define s_pin1 11
-//servo right
-#define s_pin2 10
-//servo back
-#define s_pin3 12
-//servo left
-#define s_pin4 13
+//front_left
+#define pin1 5
+//front_right
+#define pin2 2
+//back_left
+#define pin3 3
+//back_right
+#define pin4 6
+//back_vertical
+#define pin5 7
+//back_horizontal
+#define pin6 8
+
+
+//servo
+#define s_pin1 44
 //light
-#define ledPin 9
+#define ledPin 45
+//claw
+#define s_pin2 46
 
-Servo m1, m2, m3, m4;
-Servo s1, s2, s3, s4;
+Servo m1, m2, m3, m4, m5, m6; //моторы
+Servo s1,s2; //серва и клешня
 
-int m1_val, m2_val, m3_val, m4_val;
+
+int m1_val, m2_val, m3_val, m4_val, m5_val, m6_val;
 
 int ledValue = 0;
 
@@ -81,11 +84,17 @@ void attach_pins()
     m3.writeMicroseconds(1500);
     m4.attach(pin4);
     m4.writeMicroseconds(1500);
+    m5.attach(pin5);
+    m5.writeMicroseconds(1500);
+    m6.attach(pin6);
+    m6.writeMicroseconds(1500);
 
-    //    s1.attach(s_pin1);
-    //    s2.attach(s_pin2);
-    //    s3.attach(s_pin3);
-    //    s4.attach(s_pin4);
+
+    s1.attach(s_pin1);
+    s1.write(90);  // центральное положение сервы
+    
+    s2.attach(s_pin2);
+    s2.writeMicroseconds(1500); // нейтральное положение клешни
 
     pinMode(ledPin, OUTPUT);
 }
@@ -145,9 +154,12 @@ void setup()
 
     attach_pins();
 
+    delay(8000); //ожидание загрузки бутлоадера raspberry
+
     analogWrite(ledPin, 120);
 
     delay(2000);
+
     if (!mpu.setup(0x68))
     { // change to your own address
         while (1)
@@ -226,19 +238,17 @@ void setMotors()
     int m2_val_new = map(intData[2], -100, 100, 1100, 1900);
     int m3_val_new = map(intData[3], -100, 100, 1100, 1900);
     int m4_val_new = map(intData[4], -100, 100, 1100, 1900);
+    int m5_val_new = map(intData[5], -100, 100, 1100, 1900);
+    int m6_val_new = map(intData[6], -100, 100, 1100, 1900);
 
-    if (intData[5] != ledValue)
+    int servo_val_new = map(intData[8], -90, 90, 0, 180);
+    int claw_val_new = map(intData[9], -100, 100, 1100, 1900);
+
+    if (intData[7] != ledValue)
     {
-        ledValue = intData[5];
+        ledValue = intData[7];
         analogWrite(ledPin, ledValue);
     }
-
-    //        int s1_val = dataArray[4];
-    //        int s2_val = dataArray[5];
-    //        int s3_val = dataArray[6];
-    //        int s4_val = dataArray[7];
-    //
-    //        int l1_val = dataArray[8];
 
     m1.writeMicroseconds(m1_val_new);
 
@@ -247,6 +257,16 @@ void setMotors()
     m3.writeMicroseconds(m3_val_new);
 
     m4.writeMicroseconds(m4_val_new);
+
+    m5.writeMicroseconds(m5_val_new);
+
+    m6.writeMicroseconds(m6_val_new);
+
+    s1.write(servo_val_new);
+
+    s2.writeMicroseconds(claw_val_new);
+
+
 }
 
 void parsing()
@@ -294,15 +314,15 @@ void loop()
 {
 
 
-    if (mpu.update())
-    {
-        static uint32_t prev_ms = millis();
-        if (millis() > prev_ms + 30)
-        {
-            printData();
-            prev_ms = millis();
-        }
-    }
+    // if (mpu.update())
+    // {
+    //     static uint32_t prev_ms = millis();
+    //     if (millis() > prev_ms + 30)
+    //     {
+    //         printData();
+    //         prev_ms = millis();
+    //     }
+    // }
 
     parsing(); // функция парсинга
     if (recievedFlag)
@@ -320,6 +340,7 @@ void loop()
             else if (com_type == 3)
             {
                 setMotors();
+                printData();
             }
         }
         recievedFlag = false;
