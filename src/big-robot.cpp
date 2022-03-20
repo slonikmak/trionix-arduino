@@ -7,6 +7,11 @@
 $1 - старт стриминга данных датчиков
 $2 - калибровка
 $3 - установка моторов
+пример: $1 10 10 10 10 90 45 35 34 250 80;
+[1-4] - моторы
+[5-8] - сервы
+[9] - свет
+[10] - манипулятор
 
 Калибровка https://github.com/hideakitai/MPU9250/blob/master/examples/calibration_eeprom/calibration_eeprom.ino
 */
@@ -19,7 +24,7 @@ $3 - установка моторов
 #include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
 
 
-#define PARSE_AMOUNT 6        // число значений в массиве, который хотим получить
+#define PARSE_AMOUNT 10        // число значений в массиве, который хотим получить
 #define INPUT_AMOUNT 100      // максимальное количество символов в пакете, который идёт в сериал
 char inputData[INPUT_AMOUNT]; // массив входных значений (СИМВОЛЫ)
 int intData[PARSE_AMOUNT];    // массив численных значений после парсинга
@@ -85,7 +90,7 @@ void attach_pins()
     //    s1.attach(s_pin1);
     //    s2.attach(s_pin2);
     //    s3.attach(s_pin3);
-    //    s4.attach(s_pin4);
+    s4.attach(s_pin4);
 
     pinMode(ledPin, OUTPUT);
 }
@@ -227,6 +232,8 @@ void setMotors()
     int m3_val_new = map(intData[3], -100, 100, 1100, 1900);
     int m4_val_new = map(intData[4], -100, 100, 1100, 1900);
 
+    int s4_val = intData[8];
+
     if (intData[5] != ledValue)
     {
         ledValue = intData[5];
@@ -247,6 +254,8 @@ void setMotors()
     m3.writeMicroseconds(m3_val_new);
 
     m4.writeMicroseconds(m4_val_new);
+
+    s4.write(s4_val);
 }
 
 void parsing()
