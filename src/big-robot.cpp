@@ -7,7 +7,7 @@
 $1 - старт стриминга данных датчиков
 $2 - калибровка
 $3 - установка моторов
-пример: $1 10 10 10 10 90 45 35 34 250 80;
+пример: $3 10 10 10 10 90 45 35 34 250 80;
 [1-4] - моторы
 [5-8] - сервы
 [9] - свет
@@ -48,7 +48,7 @@ String string_convert;
 //servo back
 #define s_pin3 12
 //servo left
-#define s_pin4 13
+#define s_pin4 2
 //light
 #define ledPin 9
 
@@ -87,9 +87,9 @@ void attach_pins()
     m4.attach(pin4);
     m4.writeMicroseconds(1500);
 
-    //    s1.attach(s_pin1);
-    //    s2.attach(s_pin2);
-    //    s3.attach(s_pin3);
+    // s1.attach(s_pin1);
+    // s2.attach(s_pin2);
+    // s3.attach(s_pin3);
     s4.attach(s_pin4);
 
     pinMode(ledPin, OUTPUT);
@@ -236,7 +236,7 @@ void setMotors()
 
     if (intData[5] != ledValue)
     {
-        ledValue = intData[5];
+        ledValue = intData[9];
         analogWrite(ledPin, ledValue);
     }
 
