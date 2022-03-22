@@ -2,7 +2,6 @@
 Протокол из Arduino:
 #0 [msg]- сервисное сообщение
 #1 [1 23 44 55] - значение датчиков
-
 Протокол в Arduino (режимы работы)
 $1 - старт стриминга данных датчиков
 $2 - калибровка
@@ -12,7 +11,6 @@ $3 - установка моторов
 [5-8] - сервы
 [9] - свет
 [10] - манипулятор
-
 Калибровка https://github.com/hideakitai/MPU9250/blob/master/examples/calibration_eeprom/calibration_eeprom.ino
 */
 
@@ -22,6 +20,12 @@ $3 - установка моторов
 #include "eeprom_utils.h"
 #include "MS5837.h"
 #include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
+
+#define __MIN_ANGLE 0
+#define __MAX_ANGLE 210
+#define __MIN_PULSES 500
+#define __MAX_PULSES 2500
+
 
 
 #define PARSE_AMOUNT 10        // число значений в массиве, который хотим получить
@@ -40,13 +44,13 @@ String string_convert;
 //back
 #define pin3 8
 //left
-#define pin4 5
+#define pin4 45
 //servo front
-#define s_pin1 11
+#define s_pin1 5
 //servo right
-#define s_pin2 10
+#define s_pin2 44
 //servo back
-#define s_pin3 12
+#define s_pin3 3
 //servo left
 #define s_pin4 2
 //light
@@ -87,9 +91,9 @@ void attach_pins()
     m4.attach(pin4);
     m4.writeMicroseconds(1500);
 
-    // s1.attach(s_pin1);
-    // s2.attach(s_pin2);
-    // s3.attach(s_pin3);
+    s1.attach(s_pin1);
+    s2.attach(s_pin2);
+    s3.attach(s_pin3);
     s4.attach(s_pin4);
 
     pinMode(ledPin, OUTPUT);
@@ -224,7 +228,14 @@ void calibrateIMU()
     printServiceMsg("Calibration_done");
 }
 
+
+int parseServoValue(int angle_degrees) {
+    angle_degrees = constrain(angle_degrees, __MIN_ANGLE, __MAX_ANGLE);
+    return map(angle_degrees, __MIN_ANGLE, __MAX_ANGLE, __MIN_PULSES, __MAX_PULSES);
+}
+
 void setMotors()
+
 {
 
     int m1_val_new = map(intData[1], -100, 100, 1100, 1900);
@@ -232,31 +243,29 @@ void setMotors()
     int m3_val_new = map(intData[3], -100, 100, 1100, 1900);
     int m4_val_new = map(intData[4], -100, 100, 1100, 1900);
 
+    int s1_val = intData[5];
+    int s2_val = intData[6];
+    int s3_val = intData[7];
     int s4_val = intData[8];
 
-    if (intData[5] != ledValue)
+    if (intData[9] != ledValue)
     {
         ledValue = intData[9];
         analogWrite(ledPin, ledValue);
     }
 
-    //        int s1_val = dataArray[4];
-    //        int s2_val = dataArray[5];
-    //        int s3_val = dataArray[6];
-    //        int s4_val = dataArray[7];
-    //
-    //        int l1_val = dataArray[8];
-
     m1.writeMicroseconds(m1_val_new);
-
     m2.writeMicroseconds(m2_val_new);
-
     m3.writeMicroseconds(m3_val_new);
-
     m4.writeMicroseconds(m4_val_new);
 
-    s4.write(s4_val);
+    s1.writeMicroseconds(parseServoValue(s1_val));
+    s2.writeMicroseconds(parseServoValue(s2_val));
+    s3.writeMicroseconds(parseServoValue(s3_val));
+    s4.writeMicroseconds(parseServoValue(s4_val));
+
 }
+
 
 void parsing()
 {
