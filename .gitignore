@@ -6,5 +6,4 @@
 extensions.json
 lib/MPU9250/*
 lib/GyverOs/*
-lib/Parser
-lib/Servo Hardware PWM
+lib/Servo Hardware PWM/*
