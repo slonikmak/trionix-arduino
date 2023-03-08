@@ -1,13 +1,12 @@
+
 /*
 Протокол из Arduino:
 #0 [msg]- сервисное сообщение
 #1 [1 23 44 55] - значение датчиков
-
 Протокол в Arduino (режимы работы)
 $1 - старт стриминга данных датчиков
 $2 - калибровка
 $3 - установка моторов
-
 Калибровка https://github.com/hideakitai/MPU9250/blob/master/examples/calibration_eeprom/calibration_eeprom.ino
 */
 
@@ -16,10 +15,12 @@ $3 - установка моторов
 #include "MPU9250.h"
 #include "eeprom_utils.h"
 #include "MS5837.h"
+//#include "Servo.h"
 #include <Servo_Hardware_PWM.h> //использует 3 4 и 5 таймеры для аппаратного ШИМ
+int m1_val_new, m2_val_new,m3_val_new, m4_val_new, arm_val_new;
 
 
-#define PARSE_AMOUNT 6        // число значений в массиве, который хотим получить
+#define PARSE_AMOUNT 7        // число значений в массиве, который хотим получить
 #define INPUT_AMOUNT 100      // максимальное количество символов в пакете, который идёт в сериал
 char inputData[INPUT_AMOUNT]; // массив входных значений (СИМВОЛЫ)
 int intData[PARSE_AMOUNT];    // массив численных значений после парсинга
@@ -35,7 +36,7 @@ String string_convert;
 //back
 #define pin3 8
 //left
-#define pin4 5
+#define pin4 45
 //servo front
 #define s_pin1 11
 //servo right
@@ -47,10 +48,11 @@ String string_convert;
 //light
 #define ledPin 9
 
+#define armPin 2
 Servo m1, m2, m3, m4;
-Servo s1, s2, s3, s4;
+//Servo s1, s2, s3, s4;
+Servo arm;
 
-int m1_val, m2_val, m3_val, m4_val;
 
 int ledValue = 0;
 
@@ -73,6 +75,7 @@ int mode = 1; // 1 - streaming,  2 - calibration
 
 void attach_pins()
 {
+    
     m1.attach(pin1);
     m1.writeMicroseconds(1500); // send "stop" signal to ESC.
     m2.attach(pin2);
@@ -83,7 +86,8 @@ void attach_pins()
     m4.writeMicroseconds(1500);
 
     //    s1.attach(s_pin1);
-    //    s2.attach(s_pin2);
+    arm.attach(armPin);
+    arm.writeMicroseconds(1500);
     //    s3.attach(s_pin3);
     //    s4.attach(s_pin4);
 
@@ -114,9 +118,10 @@ void printData()
                     // heading
                     + String(mpu.getYaw()) + " "
                     // pitch
-                    + String(mpu.getPitch()) + " "
-                    // roll
+                    
                     + String(mpu.getRoll()) + " "
+                    // roll
+                     + String(mpu.getPitch()) + " "
                     // depth
                     + String(sensor.depth() - depth_cal) + " "
                     // temp
@@ -147,7 +152,7 @@ void setup()
 
     analogWrite(ledPin, 120);
 
-    delay(2000);
+    delay(5000);
     if (!mpu.setup(0x68))
     { // change to your own address
         while (1)
@@ -222,16 +227,45 @@ void calibrateIMU()
 void setMotors()
 {
 
-    int m1_val_new = map(intData[1], -100, 100, 1100, 1900);
-    int m2_val_new = map(intData[2], -100, 100, 1100, 1900);
-    int m3_val_new = map(intData[3], -100, 100, 1100, 1900);
-    int m4_val_new = map(intData[4], -100, 100, 1100, 1900);
+    m1_val_new = map(intData[1], -100, 100, 1100, 1900);
+    m2_val_new = map(intData[2], -100, 100, 1100, 1900);
+    m3_val_new = map(intData[3], -100, 100, 1100, 1900);
+    m4_val_new = map(intData[4], -100, 100, 1100, 1900);
+    arm_val_new = map(intData[6], -100, 100, 1100, 1900);
 
     if (intData[5] != ledValue)
     {
         ledValue = intData[5];
         analogWrite(ledPin, ledValue);
     }
+    //arm.writeMicroseconds(arm_val_new);
+    if (intData[6] != 0){
+      
+      arm_val_new = map(intData[6], -100, 100, 1100, 1900);
+      if(intData[6] == -50 || intData[6] == 50){
+          arm.writeMicroseconds(arm_val_new);
+          delay(10);
+          arm.writeMicroseconds(1500);
+        }        
+        
+      else if(intData[6] == 100 || intData[6] == -100){
+        
+          arm.writeMicroseconds(arm_val_new);
+          delay(30);
+          arm.writeMicroseconds(1500);
+        
+      }
+      /*else{
+        arm.writeMicroseconds(1500);
+      }*/
+      
+      //arm.writeMicroseconds(1500);
+    }
+     
+
+      
+
+    
 
     //        int s1_val = dataArray[4];
     //        int s2_val = dataArray[5];
@@ -247,6 +281,8 @@ void setMotors()
     m3.writeMicroseconds(m3_val_new);
 
     m4.writeMicroseconds(m4_val_new);
+
+    
 }
 
 void parsing()
@@ -278,6 +314,7 @@ void parsing()
                     string_convert = str;
                     intData[index] = string_convert.toInt();
                     index++;
+                    
                 }
                 index = 0;
             }
@@ -286,6 +323,7 @@ void parsing()
         { // если таки приняли ; - конец парсинга
             getStarted = false;
             recievedFlag = true;
+            
         }
     }
 }
@@ -327,3 +365,4 @@ void loop()
     sensor.read(); //чтение глубины
     BatMeasVal = (float)analogRead(0) * VREF * ((DIV_R3 + DIV_R4) / DIV_R4) / 1024;
 }
+
